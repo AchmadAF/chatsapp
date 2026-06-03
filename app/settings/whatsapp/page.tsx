@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { AppShell, Panel } from "@/components/app/shell";
 
 type Device = {
@@ -40,20 +40,20 @@ export default function WhatsappSettingsPage() {
     return data.results ?? null;
   }
 
-  async function loadSettings() {
+  const loadSettings = useCallback(async () => {
     const results = await request<{ baseUrl?: string }>("/api/settings/whatsapp");
     setBaseUrl(results?.baseUrl ?? "");
-  }
+  }, []);
 
   async function saveSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await request<{ baseUrl?: string }>("/api/settings/whatsapp", { method: "POST", body: JSON.stringify({ baseUrl }) });
   }
 
-  async function loadDevices() {
+  const loadDevices = useCallback(async () => {
     const results = await request<Device[]>("/api/whatsapp/devices");
     setDevices(Array.isArray(results) ? results : []);
-  }
+  }, []);
 
   async function addDevice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,7 +80,7 @@ export default function WhatsappSettingsPage() {
       loadDevices();
     }, 0);
     return () => window.clearTimeout(timeout);
-  }, []);
+  }, [loadSettings, loadDevices]);
 
   return (
     <AppShell title="Setting" subtitle="Atur URL backend WhatsApp dan login device via QR.">
@@ -123,7 +123,7 @@ export default function WhatsappSettingsPage() {
               <button className="w-full rounded-xl bg-white/10 px-4 py-3 text-sm hover:bg-white/15" onClick={() => deviceId && loginQr(deviceId)}>Login QR</button>
             </div>
             {message ? <p className="mt-4 rounded-xl bg-white/5 p-3 text-sm text-slate-300">{message}</p> : null}
-            {qrLink ? <img alt="WhatsApp QR" className="mt-4 w-full rounded-xl border border-white/10 bg-white p-3" src={qrLink} /> : null}
+            {qrLink ? <img alt="WhatsApp QR" className="mt-4 w-full rounded-xl border border-white/10 bg-white p-3" src={qrLink} /> : null} {/* eslint-disable-line @next/next/no-img-element */}
           </Panel>
         </div>
       </div>
