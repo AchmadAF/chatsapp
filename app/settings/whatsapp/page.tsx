@@ -21,9 +21,8 @@ type ApiResponse<T> = {
 export default function WhatsappSettingsPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [deviceId, setDeviceId] = useState("");
-  const [phone, setPhone] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
   const [qrLink, setQrLink] = useState("");
-  const [pairCode, setPairCode] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +40,16 @@ export default function WhatsappSettingsPage() {
     return data.results ?? null;
   }
 
+  async function loadSettings() {
+    const results = await request<{ baseUrl?: string }>("/api/settings/whatsapp");
+    setBaseUrl(results?.baseUrl ?? "");
+  }
+
+  async function saveSettings(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await request<{ baseUrl?: string }>("/api/settings/whatsapp", { method: "POST", body: JSON.stringify({ baseUrl }) });
+  }
+
   async function loadDevices() {
     const results = await request<Device[]>("/api/whatsapp/devices");
     setDevices(Array.isArray(results) ? results : []);
@@ -56,13 +65,6 @@ export default function WhatsappSettingsPage() {
   async function loginQr(id: string) {
     const results = await request<{ qr_link?: string }>(`/api/whatsapp/devices/${encodeURIComponent(id)}/login`);
     setQrLink(results?.qr_link ?? "");
-    setPairCode("");
-  }
-
-  async function loginCode(id: string) {
-    const results = await request<{ pair_code?: string }>(`/api/whatsapp/devices/${encodeURIComponent(id)}/login/code?phone=${encodeURIComponent(phone)}`, { method: "POST" });
-    setPairCode(results?.pair_code ?? "");
-    setQrLink("");
   }
 
   async function action(id: string, name: "status" | "reconnect" | "logout") {
@@ -74,13 +76,14 @@ export default function WhatsappSettingsPage() {
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
+      loadSettings();
       loadDevices();
     }, 0);
     return () => window.clearTimeout(timeout);
   }, []);
 
   return (
-    <AppShell title="WhatsApp Device" subtitle="Login QR, pairing code, reconnect, logout, dan status device.">
+    <AppShell title="Setting" subtitle="Atur URL backend WhatsApp dan login device via QR.">
       <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
         <Panel title="Device monitor">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -104,20 +107,25 @@ export default function WhatsappSettingsPage() {
             {!devices.length ? <p className="text-sm text-slate-400">Belum ada device.</p> : null}
           </div>
         </Panel>
-        <Panel title="Tambah akun">
-          <form className="space-y-3" onSubmit={addDevice}>
-            <input className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-emerald-400/50" placeholder="device_id opsional" value={deviceId} onChange={(event) => setDeviceId(event.target.value)} />
-            <input className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-emerald-400/50" placeholder="62812xxxx buat pairing code" value={phone} onChange={(event) => setPhone(event.target.value)} />
-            <button className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60" disabled={loading}>{loading ? "Loading..." : "Tambah device"}</button>
-          </form>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button className="rounded-xl bg-white/10 px-4 py-3 text-sm hover:bg-white/15" onClick={() => deviceId && loginQr(deviceId)}>Login QR</button>
-            <button className="rounded-xl bg-white/10 px-4 py-3 text-sm hover:bg-white/15" onClick={() => deviceId && phone && loginCode(deviceId)}>Pairing code</button>
-          </div>
-          {message ? <p className="mt-4 rounded-xl bg-white/5 p-3 text-sm text-slate-300">{message}</p> : null}
-          {pairCode ? <p className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-center text-2xl font-bold tracking-widest text-emerald-100">{pairCode}</p> : null}
-          {qrLink ? <img alt="WhatsApp QR" className="mt-4 w-full rounded-xl border border-white/10 bg-white p-3" src={qrLink} /> : null}
-        </Panel>
+        <div className="space-y-5">
+          <Panel title="Backend WhatsApp">
+            <form className="space-y-3" onSubmit={saveSettings}>
+              <input className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-emerald-400/50" placeholder="http://localhost:3000" value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
+              <button className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60" disabled={loading}>{loading ? "Loading..." : "Simpan URL"}</button>
+            </form>
+          </Panel>
+          <Panel title="Tambah akun">
+            <form className="space-y-3" onSubmit={addDevice}>
+              <input className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm outline-none focus:border-emerald-400/50" placeholder="device_id opsional" value={deviceId} onChange={(event) => setDeviceId(event.target.value)} />
+              <button className="w-full rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-60" disabled={loading}>{loading ? "Loading..." : "Tambah device"}</button>
+            </form>
+            <div className="mt-3">
+              <button className="w-full rounded-xl bg-white/10 px-4 py-3 text-sm hover:bg-white/15" onClick={() => deviceId && loginQr(deviceId)}>Login QR</button>
+            </div>
+            {message ? <p className="mt-4 rounded-xl bg-white/5 p-3 text-sm text-slate-300">{message}</p> : null}
+            {qrLink ? <img alt="WhatsApp QR" className="mt-4 w-full rounded-xl border border-white/10 bg-white p-3" src={qrLink} /> : null}
+          </Panel>
+        </div>
       </div>
     </AppShell>
   );

@@ -1,4 +1,10 @@
-export const whatsappBaseUrl = process.env.WHATSAPP_API_URL ?? "http://localhost:3000";
+import { cookies } from "next/headers";
+
+export const defaultWhatsappBaseUrl = process.env.WHATSAPP_API_URL ?? "http://localhost:3000";
+
+export async function whatsappBaseUrl() {
+  return (await cookies()).get("whatsapp_base_url")?.value || defaultWhatsappBaseUrl;
+}
 
 export function whatsappHeaders(deviceId?: string) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -10,7 +16,8 @@ export function whatsappHeaders(deviceId?: string) {
 }
 
 export async function whatsappFetch(path: string, init?: RequestInit & { deviceId?: string }) {
-  const response = await fetch(`${whatsappBaseUrl}${path}`, {
+  const baseUrl = await whatsappBaseUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: { ...whatsappHeaders(init?.deviceId), ...init?.headers },
     cache: "no-store",

@@ -17,7 +17,7 @@ const nav = [
   ["Stock", "/stock"],
   ["Customer", "/customers"],
   ["AI Reply", "/ai"],
-  ["WhatsApp", "/settings/whatsapp"],
+  ["Setting", "/settings/whatsapp"],
   ["Template", "/settings/templates"],
 ];
 
