@@ -87,9 +87,6 @@ Prisma.NullTypes = {
  * Enums
  */
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
-  ReadUncommitted: 'ReadUncommitted',
-  ReadCommitted: 'ReadCommitted',
-  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 });
 
@@ -251,11 +248,6 @@ exports.Prisma.NullableJsonNullValueInput = {
   JsonNull: Prisma.JsonNull
 };
 
-exports.Prisma.QueryMode = {
-  default: 'default',
-  insensitive: 'insensitive'
-};
-
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
@@ -265,6 +257,11 @@ exports.Prisma.JsonNullValueFilter = {
   DbNull: Prisma.DbNull,
   JsonNull: Prisma.JsonNull,
   AnyNull: Prisma.AnyNull
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
 };
 exports.UserRole = exports.$Enums.UserRole = {
   admin: 'admin',
@@ -358,7 +355,8 @@ const config = {
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null
+    "rootEnvPath": null,
+    "schemaEnvPath": "../../../.env"
   },
   "relativePath": "../../../prisma",
   "clientVersion": "6.19.3",
@@ -366,18 +364,17 @@ const config = {
   "datasourceNames": [
     "db"
   ],
-  "activeProvider": "postgresql",
-  "postinstall": false,
+  "activeProvider": "sqlite",
   "inlineDatasources": {
     "db": {
       "url": {
-        "fromEnvVar": "DATABASE_URL",
-        "value": null
+        "fromEnvVar": null,
+        "value": "file:./dev.db"
       }
     }
   },
-  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\nenum UserRole {\n  admin\n  cs\n}\n\nenum ProductStatus {\n  active\n  inactive\n}\n\nenum OrderStatus {\n  draft\n  pending_payment\n  paid\n  processing\n  shipped\n  done\n  cancelled\n}\n\nenum PaymentStatus {\n  pending\n  paid\n  expired\n  failed\n  cancelled\n  refunded\n}\n\nenum ChatStatus {\n  unassigned\n  assigned\n  resolved\n}\n\nenum FollowUpStatus {\n  pending\n  sent\n  skipped\n}\n\nenum StockMovementType {\n  in\n  out\n  adjustment\n}\n\nmodel User {\n  id            String   @id @default(cuid())\n  email         String   @unique\n  name          String\n  passwordHash  String\n  role          UserRole @default(cs)\n  createdAt     DateTime @default(now())\n  updatedAt     DateTime @updatedAt\n  assignedChats Chat[]\n}\n\nmodel Customer {\n  id        String   @id @default(cuid())\n  phone     String   @unique\n  name      String?\n  chatJid   String   @unique\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  chats     Chat[]\n  orders    Order[]\n}\n\nmodel WhatsappDevice {\n  id        String   @id\n  name      String?\n  status    String   @default(\"unknown\")\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  chats     Chat[]\n}\n\nmodel Chat {\n  id              String          @id @default(cuid())\n  chatJid         String\n  deviceId        String?\n  customerId      String?\n  assignedUserId  String?\n  status          ChatStatus      @default(unassigned)\n  labels          String[]        @default([])\n  unread          Int             @default(0)\n  lastMessage     String?\n  firstInboundAt  DateTime?\n  firstResponseAt DateTime?\n  lastInboundAt   DateTime?\n  createdAt       DateTime        @default(now())\n  updatedAt       DateTime        @updatedAt\n  assignedUser    User?           @relation(fields: [assignedUserId], references: [id])\n  customer        Customer?       @relation(fields: [customerId], references: [id])\n  device          WhatsappDevice? @relation(fields: [deviceId], references: [id])\n  messages        Message[]\n  orders          Order[]\n\n  @@unique([chatJid, deviceId])\n}\n\nmodel Message {\n  id        String   @id @default(cuid())\n  chatId    String\n  waId      String?  @unique\n  fromMe    Boolean  @default(false)\n  body      String\n  createdAt DateTime @default(now())\n  chat      Chat     @relation(fields: [chatId], references: [id])\n}\n\nmodel Product {\n  id          String          @id @default(cuid())\n  name        String\n  sku         String          @unique\n  description String?\n  price       Int\n  stock       Int             @default(0)\n  status      ProductStatus   @default(active)\n  imageUrl    String?\n  createdAt   DateTime        @default(now())\n  updatedAt   DateTime        @updatedAt\n  items       OrderItem[]\n  movements   StockMovement[]\n}\n\nmodel Order {\n  id         String      @id @default(cuid())\n  customerId String\n  chatId     String?\n  status     OrderStatus @default(draft)\n  subtotal   Int         @default(0)\n  total      Int         @default(0)\n  notes      String?\n  createdAt  DateTime    @default(now())\n  updatedAt  DateTime    @updatedAt\n  customer   Customer    @relation(fields: [customerId], references: [id])\n  chat       Chat?       @relation(fields: [chatId], references: [id])\n  items      OrderItem[]\n  invoice    Invoice?\n  payments   Payment[]\n}\n\nmodel OrderItem {\n  id        String  @id @default(cuid())\n  orderId   String\n  productId String\n  qty       Int\n  price     Int\n  total     Int\n  order     Order   @relation(fields: [orderId], references: [id])\n  product   Product @relation(fields: [productId], references: [id])\n}\n\nmodel Invoice {\n  id         String        @id @default(cuid())\n  orderId    String        @unique\n  paymentUrl String?\n  status     PaymentStatus @default(pending)\n  createdAt  DateTime      @default(now())\n  updatedAt  DateTime      @updatedAt\n  order      Order         @relation(fields: [orderId], references: [id])\n}\n\nmodel Payment {\n  id              String        @id @default(cuid())\n  orderId         String\n  midtransOrderId String?       @unique\n  transactionId   String?\n  status          PaymentStatus @default(pending)\n  amount          Int\n  rawCallback     Json?\n  createdAt       DateTime      @default(now())\n  updatedAt       DateTime      @updatedAt\n  order           Order         @relation(fields: [orderId], references: [id])\n  followUps       FollowUp[]\n}\n\nmodel FollowUp {\n  id        String         @id @default(cuid())\n  paymentId String\n  stage     String\n  status    FollowUpStatus @default(pending)\n  dueAt     DateTime\n  sentAt    DateTime?\n  createdAt DateTime       @default(now())\n  updatedAt DateTime       @updatedAt\n  payment   Payment        @relation(fields: [paymentId], references: [id])\n\n  @@unique([paymentId, stage])\n}\n\nmodel StockMovement {\n  id        String            @id @default(cuid())\n  productId String\n  type      StockMovementType\n  qty       Int\n  note      String?\n  orderId   String?\n  createdAt DateTime          @default(now())\n  product   Product           @relation(fields: [productId], references: [id])\n}\n\nmodel MessageTemplate {\n  id        String   @id @default(cuid())\n  key       String   @unique\n  name      String\n  body      String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel AuditLog {\n  id        String   @id @default(cuid())\n  actorId   String?\n  action    String\n  entity    String\n  entityId  String?\n  metadata  Json?\n  createdAt DateTime @default(now())\n}\n",
-  "inlineSchemaHash": "a144790971eeef8468959d10c26fdac19f7d4636e82a68677e370abdb57e6243",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client-js\"\n  output   = \"../app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  url      = \"file:./dev.db\"\n}\n\nenum UserRole {\n  admin\n  cs\n}\n\nenum ProductStatus {\n  active\n  inactive\n}\n\nenum OrderStatus {\n  draft\n  pending_payment\n  paid\n  processing\n  shipped\n  done\n  cancelled\n}\n\nenum PaymentStatus {\n  pending\n  paid\n  expired\n  failed\n  cancelled\n  refunded\n}\n\nenum ChatStatus {\n  unassigned\n  assigned\n  resolved\n}\n\nenum FollowUpStatus {\n  pending\n  sent\n  skipped\n}\n\nenum StockMovementType {\n  in\n  out\n  adjustment\n}\n\nmodel User {\n  id            String   @id @default(cuid())\n  email         String   @unique\n  name          String\n  passwordHash  String\n  role          UserRole @default(cs)\n  createdAt     DateTime @default(now())\n  updatedAt     DateTime @updatedAt\n  assignedChats Chat[]\n}\n\nmodel Customer {\n  id        String   @id @default(cuid())\n  phone     String   @unique\n  name      String?\n  chatJid   String   @unique\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  chats     Chat[]\n  orders    Order[]\n}\n\nmodel WhatsappDevice {\n  id        String   @id\n  name      String?\n  status    String   @default(\"unknown\")\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n  chats     Chat[]\n}\n\nmodel Chat {\n  id              String          @id @default(cuid())\n  chatJid         String\n  deviceId        String?\n  customerId      String?\n  assignedUserId  String?\n  status          ChatStatus      @default(unassigned)\n  labels          String          @default(\"[]\")\n  unread          Int             @default(0)\n  lastMessage     String?\n  firstInboundAt  DateTime?\n  firstResponseAt DateTime?\n  lastInboundAt   DateTime?\n  createdAt       DateTime        @default(now())\n  updatedAt       DateTime        @updatedAt\n  assignedUser    User?           @relation(fields: [assignedUserId], references: [id])\n  customer        Customer?       @relation(fields: [customerId], references: [id])\n  device          WhatsappDevice? @relation(fields: [deviceId], references: [id])\n  messages        Message[]\n  orders          Order[]\n\n  @@unique([chatJid, deviceId])\n}\n\nmodel Message {\n  id        String   @id @default(cuid())\n  chatId    String\n  waId      String?  @unique\n  fromMe    Boolean  @default(false)\n  body      String\n  createdAt DateTime @default(now())\n  chat      Chat     @relation(fields: [chatId], references: [id])\n}\n\nmodel Product {\n  id          String          @id @default(cuid())\n  name        String\n  sku         String          @unique\n  description String?\n  price       Int\n  stock       Int             @default(0)\n  status      ProductStatus   @default(active)\n  imageUrl    String?\n  createdAt   DateTime        @default(now())\n  updatedAt   DateTime        @updatedAt\n  items       OrderItem[]\n  movements   StockMovement[]\n}\n\nmodel Order {\n  id         String      @id @default(cuid())\n  customerId String\n  chatId     String?\n  status     OrderStatus @default(draft)\n  subtotal   Int         @default(0)\n  total      Int         @default(0)\n  notes      String?\n  createdAt  DateTime    @default(now())\n  updatedAt  DateTime    @updatedAt\n  customer   Customer    @relation(fields: [customerId], references: [id])\n  chat       Chat?       @relation(fields: [chatId], references: [id])\n  items      OrderItem[]\n  invoice    Invoice?\n  payments   Payment[]\n}\n\nmodel OrderItem {\n  id        String  @id @default(cuid())\n  orderId   String\n  productId String\n  qty       Int\n  price     Int\n  total     Int\n  order     Order   @relation(fields: [orderId], references: [id])\n  product   Product @relation(fields: [productId], references: [id])\n}\n\nmodel Invoice {\n  id         String        @id @default(cuid())\n  orderId    String        @unique\n  paymentUrl String?\n  status     PaymentStatus @default(pending)\n  createdAt  DateTime      @default(now())\n  updatedAt  DateTime      @updatedAt\n  order      Order         @relation(fields: [orderId], references: [id])\n}\n\nmodel Payment {\n  id              String        @id @default(cuid())\n  orderId         String\n  midtransOrderId String?       @unique\n  transactionId   String?\n  status          PaymentStatus @default(pending)\n  amount          Int\n  rawCallback     Json?\n  createdAt       DateTime      @default(now())\n  updatedAt       DateTime      @updatedAt\n  order           Order         @relation(fields: [orderId], references: [id])\n  followUps       FollowUp[]\n}\n\nmodel FollowUp {\n  id        String         @id @default(cuid())\n  paymentId String\n  stage     String\n  status    FollowUpStatus @default(pending)\n  dueAt     DateTime\n  sentAt    DateTime?\n  createdAt DateTime       @default(now())\n  updatedAt DateTime       @updatedAt\n  payment   Payment        @relation(fields: [paymentId], references: [id])\n\n  @@unique([paymentId, stage])\n}\n\nmodel StockMovement {\n  id        String            @id @default(cuid())\n  productId String\n  type      StockMovementType\n  qty       Int\n  note      String?\n  orderId   String?\n  createdAt DateTime          @default(now())\n  product   Product           @relation(fields: [productId], references: [id])\n}\n\nmodel MessageTemplate {\n  id        String   @id @default(cuid())\n  key       String   @unique\n  name      String\n  body      String\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n}\n\nmodel AuditLog {\n  id        String   @id @default(cuid())\n  actorId   String?\n  action    String\n  entity    String\n  entityId  String?\n  metadata  Json?\n  createdAt DateTime @default(now())\n}\n",
+  "inlineSchemaHash": "e5e811a664d1f32c3e07162dd47730c732351287ec599f4bff49a3ae62015a9a",
   "copyEngine": true
 }
 config.dirname = '/'
@@ -395,9 +392,7 @@ config.engineWasm = {
 config.compilerWasm = undefined
 
 config.injectableEdgeEnv = () => ({
-  parsed: {
-    DATABASE_URL: typeof globalThis !== 'undefined' && globalThis['DATABASE_URL'] || typeof process !== 'undefined' && process.env && process.env.DATABASE_URL || undefined
-  }
+  parsed: {}
 })
 
 if (typeof globalThis !== 'undefined' && globalThis['DEBUG'] || typeof process !== 'undefined' && process.env && process.env.DEBUG || undefined) {

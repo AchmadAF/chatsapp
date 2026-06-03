@@ -1,16 +1,13 @@
+import { AppShell, Panel } from "@/components/app/shell";
+
+const templates = ["Sapaan", "Invoice", "Payment success", "Payment expired", "Order processing", "Order shipped", "Follow-up pending payment"];
+
 export default function TemplatesPage() {
   return (
-    <main className="p-8">
-      <h1 className="text-2xl font-bold">Template Pesan</h1>
-      <ul className="mt-4 list-inside list-disc text-slate-700">
-        <li>Sapaan</li>
-        <li>Invoice</li>
-        <li>Payment success</li>
-        <li>Payment expired</li>
-        <li>Order processing</li>
-        <li>Order shipped</li>
-        <li>Follow-up pending payment</li>
-      </ul>
-    </main>
+    <AppShell title="Template Pesan" subtitle="Quick reply untuk CS dan automation.">
+      <div className="grid gap-4 md:grid-cols-2">
+        {templates.map((template) => <Panel key={template} title={template}><p className="text-sm text-slate-400">Template siap dipakai dengan variable order/customer.</p></Panel>)}
+      </div>
+    </AppShell>
   );
 }

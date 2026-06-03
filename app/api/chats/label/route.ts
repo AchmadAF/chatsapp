@@ -9,8 +9,9 @@ export async function POST(request: Request) {
   const chat = await prisma.chat.findUnique({ where: { id: payload.chatId } });
   if (!chat) return Response.json({ error: "Chat not found" }, { status: 404 });
 
-  const labels = payload.labeled ? Array.from(new Set([...chat.labels, payload.label])) : chat.labels.filter((label) => label !== payload.label);
-  const updated = await prisma.chat.update({ where: { id: chat.id }, data: { labels } });
+  const currentLabels = JSON.parse(chat.labels) as string[];
+  const labels = payload.labeled ? Array.from(new Set([...currentLabels, payload.label])) : currentLabels.filter((label) => label !== payload.label);
+  const updated = await prisma.chat.update({ where: { id: chat.id }, data: { labels: JSON.stringify(labels) } });
 
   await whatsappFetch(`/chat/${encodeURIComponent(chat.chatJid)}/label`, {
     method: "POST",

@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 enum UserRole {
@@ -93,7 +93,7 @@ model Chat {
   customerId      String?
   assignedUserId  String?
   status          ChatStatus      @default(unassigned)
-  labels          String[]        @default([])
+  labels          String          @default("[]")
   unread          Int             @default(0)
   lastMessage     String?
   firstInboundAt  DateTime?
