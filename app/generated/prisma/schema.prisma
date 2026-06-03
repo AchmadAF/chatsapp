@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  admin
+  cs
+}
+
+enum ProductStatus {
+  active
+  inactive
+}
+
+enum OrderStatus {
+  draft
+  pending_payment
+  paid
+  processing
+  shipped
+  done
+  cancelled
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  expired
+  failed
+  cancelled
+  refunded
+}
+
+enum ChatStatus {
+  unassigned
+  assigned
+  resolved
+}
+
+enum FollowUpStatus {
+  pending
+  sent
+  skipped
+}
+
+enum StockMovementType {
+  in
+  out
+  adjustment
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String
+  role          UserRole @default(cs)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  assignedChats Chat[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  name      String?
+  chatJid   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chats     Chat[]
+  orders    Order[]
+}
+
+model WhatsappDevice {
+  id        String   @id
+  name      String?
+  status    String   @default("unknown")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  chats     Chat[]
+}
+
+model Chat {
+  id              String          @id @default(cuid())
+  chatJid         String
+  deviceId        String?
+  customerId      String?
+  assignedUserId  String?
+  status          ChatStatus      @default(unassigned)
+  labels          String[]        @default([])
+  unread          Int             @default(0)
+  lastMessage     String?
+  firstInboundAt  DateTime?
+  firstResponseAt DateTime?
+  lastInboundAt   DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  assignedUser    User?           @relation(fields: [assignedUserId], references: [id])
+  customer        Customer?       @relation(fields: [customerId], references: [id])
+  device          WhatsappDevice? @relation(fields: [deviceId], references: [id])
+  messages        Message[]
+  orders          Order[]
+
+  @@unique([chatJid, deviceId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  waId      String?  @unique
+  fromMe    Boolean  @default(false)
+  body      String
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id])
+}
+
+model Product {
+  id          String          @id @default(cuid())
+  name        String
+  sku         String          @unique
+  description String?
+  price       Int
+  stock       Int             @default(0)
+  status      ProductStatus   @default(active)
+  imageUrl    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  items       OrderItem[]
+  movements   StockMovement[]
+}
+
+model Order {
+  id         String      @id @default(cuid())
+  customerId String
+  chatId     String?
+  status     OrderStatus @default(draft)
+  subtotal   Int         @default(0)
+  total      Int         @default(0)
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  chat       Chat?       @relation(fields: [chatId], references: [id])
+  items      OrderItem[]
+  invoice    Invoice?
+  payments   Payment[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  qty       Int
+  price     Int
+  total     Int
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  orderId    String        @unique
+  paymentUrl String?
+  status     PaymentStatus @default(pending)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  order      Order         @relation(fields: [orderId], references: [id])
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  midtransOrderId String?       @unique
+  transactionId   String?
+  status          PaymentStatus @default(pending)
+  amount          Int
+  rawCallback     Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  order           Order         @relation(fields: [orderId], references: [id])
+  followUps       FollowUp[]
+}
+
+model FollowUp {
+  id        String         @id @default(cuid())
+  paymentId String
+  stage     String
+  status    FollowUpStatus @default(pending)
+  dueAt     DateTime
+  sentAt    DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  payment   Payment        @relation(fields: [paymentId], references: [id])
+
+  @@unique([paymentId, stage])
+}
+
+model StockMovement {
+  id        String            @id @default(cuid())
+  productId String
+  type      StockMovementType
+  qty       Int
+  note      String?
+  orderId   String?
+  createdAt DateTime          @default(now())
+  product   Product           @relation(fields: [productId], references: [id])
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+}
