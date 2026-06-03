@@ -64,6 +64,17 @@ async function main() {
     ],
   });
 
+  const existingPayment = await prisma.payment.findUnique({
+    where: { midtransOrderId: "DEMO-ORDER-001" },
+  });
+
+  if (existingPayment) {
+    await prisma.orderItem.deleteMany({ where: { orderId: existingPayment.orderId } });
+    await prisma.invoice.deleteMany({ where: { orderId: existingPayment.orderId } });
+    await prisma.payment.deleteMany({ where: { orderId: existingPayment.orderId } });
+    await prisma.order.delete({ where: { id: existingPayment.orderId } });
+  }
+
   const order = await prisma.order.create({
     data: {
       customerId: customer.id,
