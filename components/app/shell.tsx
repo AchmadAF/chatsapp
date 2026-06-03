@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 const nav = [
   ["Dashboard", "/dashboard"],
@@ -18,33 +22,47 @@ const nav = [
 ];
 
 export function AppShell({ title, subtitle, children }: { title: string; subtitle?: string; children: ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <aside className="fixed inset-y-0 left-0 hidden w-72 border-r border-white/10 bg-slate-950/95 p-6 lg:block">
-        <Link href="/" className="block">
+      <aside className="fixed inset-y-0 left-0 hidden w-72 overflow-y-auto border-r border-white/10 bg-slate-950/95 p-6 lg:block">
+        <Link href="/dashboard" className="block">
           <p className="text-sm font-medium text-emerald-300">WhatsApp Commerce</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight">CS/Admin</h1>
         </Link>
         <nav className="mt-8 space-y-1">
-          {nav.map(([label, href]) => (
-            <Link key={href} href={href} className="block rounded-xl px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white">
-              {label}
-            </Link>
-          ))}
+          {nav.map(([label, href]) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link key={href} href={href} className={cn("block rounded-xl px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white", active && "bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-400/20")}>
+                {label}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
       <div className="lg:pl-72">
-        <header className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/80 px-6 py-5 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <header className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/80 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-sm text-emerald-300">Automation Dashboard</p>
               <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
               {subtitle ? <p className="mt-1 text-sm text-slate-400">{subtitle}</p> : null}
             </div>
-            <div className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-sm text-emerald-200">Online</div>
+            <nav className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
+              {nav.map(([label, href]) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+                return (
+                  <Link key={href} href={href} className={cn("shrink-0 rounded-full border border-white/10 px-3 py-2 text-xs text-slate-300", active && "border-emerald-400/30 bg-emerald-400/15 text-emerald-100")}>
+                    {label}
+                  </Link>
+                );
+              })}
+            </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-7xl p-6">{children}</main>
+        <main className="mx-auto max-w-7xl p-4 sm:p-6">{children}</main>
       </div>
     </div>
   );
